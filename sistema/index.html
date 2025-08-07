@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Cotizaciones</title>
+    <!-- Incluye Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Incluye jsPDF para la generación de PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        /* Define la fuente Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Un gris claro para el fondo */
+        }
+        /* Estilos personalizados para un mejor aspecto */
+        .card {
+            background-color: #ffffff;
+            border-radius: 1rem; /* Bordes más redondeados */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Sombra más pronunciada */
+            padding: 2rem;
+        }
+        .btn-primary {
+            background-color: #4f46e5; /* Azul índigo */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem; /* Bordes redondeados */
+            font-weight: 600;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .btn-primary:hover {
+            background-color: #4338ca; /* Un tono más oscuro de azul */
+        }
+        .btn-secondary {
+            background-color: #6b7280; /* Gris */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .btn-secondary:hover {
+            background-color: #4b5563; /* Un tono más oscuro de gris */
+        }
+        .btn-danger {
+            background-color: #ef4444; /* Rojo */
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626; /* Un tono más oscuro de rojo */
+        }
+        input[type="text"],
+        input[type="number"] {
+            border: 1px solid #d1d5db; /* Gris claro */
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            width: 100%;
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            border-color: #6366f1; /* Azul índigo al enfocar */
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); /* Sombra de enfoque */
+            outline: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb; /* Líneas divisorias grises */
+        }
+        th {
+            background-color: #f9fafb; /* Fondo ligeramente gris para los encabezados */
+            font-weight: 600;
+            color: #374151; /* Texto oscuro */
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        /* Estilos para el modal de mensaje */
+        .modal {
+            display: none; /* Oculto por defecto */
+            position: fixed; /* Posición fija */
+            z-index: 1000; /* Por encima de todo */
+            left: 0;
+            top: 0;
+            width: 100%; /* Ancho completo */
+            height: 100%; /* Alto completo */
+            overflow: auto; /* Habilitar scroll si es necesario */
+            background-color: rgba(0,0,0,0.4); /* Fondo semi-transparente */
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            width: 80%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        
+        .logo-placeholder img {
+            width: 130px;
+            height: 100px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="container mx-auto max-w-6xl bg-white rounded-2xl shadow-xl p-8 space-y-8">
+        <div class="flex items-center justify-between mb-8">
+            <div class="logo-placeholder">
+                <!-- Puedes reemplazar esto con una etiqueta img real: -->
+                <!-- <img src="URL_DE_TU_LOGO_AQUI" alt="Logo de la Empresa"> -->
+                <img src="/assets/logo.png" alt="Logo de la Empresa"">
+            </div>
+            <h1 class="text-4xl font-bold text-gray-800 text-center flex-grow">Sistema de Cotizaciones STT</h1>
+            <div class="w-20"></div> <!-- Espacio para alinear el título -->
+        </div>
+
+        <!-- Campo para el destinatario de la cotización -->
+        <div class="card">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-6">Datos de la Cotización</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="quotationRecipient" class="block text-sm font-medium text-gray-700 mb-2">Dirigido a:</label>
+                    <input type="text" id="quotationRecipient" placeholder="Nombre del Cliente o Empresa" class="focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección para agregar productos manualmente (opcional) -->
+        <div class="card">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-6">Agregar Producto Manualmente</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                <div class="col-span-1 md:col-span-2">
+                    <label for="productName" class="block text-sm font-medium text-gray-700 mb-2">Nombre del Producto</label>
+                    <input type="text" id="productName" placeholder="Ej: Servicio de Consultoría" class="focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="productQuantity" class="block text-sm font-medium text-gray-700 mb-2">Cantidad</label>
+                    <input type="number" id="productQuantity" min="1" value="1" class="focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="unitPrice" class="block text-sm font-medium text-gray-700 mb-2">Precio Unitario ($)</label>
+                    <input type="number" id="unitPrice" min="0.01" step="0.01" value="0.00" class="focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div class="md:col-span-4 lg:col-span-1 flex justify-end">
+                    <button id="addProductBtn" class="btn-primary w-full md:w-auto">
+                        Agregar Manualmente
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección de categorías -->
+        <div class="card">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-6">Seleccionar por Categoría</h2>
+            <div id="categoryButtons" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+                <!-- Los botones de categoría se generarán aquí -->
+            </div>
+            <div id="categoryProducts" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Los productos de la categoría seleccionada se mostrarán aquí -->
+            </div>
+        </div>
+
+        <!-- Sección de la cotización -->
+        <div class="card">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-6">Detalle de la Cotización</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="px-6 py-3">Producto</th>
+                            <th scope="col" class="px-6 py-3">Cantidad</th>
+                            <th scope="col" class="px-6 py-3">Precio Unitario</th>
+                            <th scope="col" class="px-6 py-3">Subtotal</th>
+                            <th scope="col" class="px-6 py-3">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="quotationTableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- Los productos se agregarán aquí dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-8 text-right text-3xl font-bold text-gray-800">
+                Total General: <span id="grandTotal">$0.00</span>
+            </div>
+            <div class="mt-8 flex justify-end">
+                <button id="generatePdfBtn" class="btn-primary">
+                    Finalizar Cotización (Generar PDF)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de mensaje -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <p id="modalMessage" class="text-lg font-medium text-gray-800"></p>
+            <button id="modalCloseBtn" class="btn-primary mt-4">Aceptar</button>
+        </div>
+    </div>
+
+    <script>
+        // Obtener referencias a los elementos del DOM
+        const quotationRecipientInput = document.getElementById('quotationRecipient');
+        const productNameInput = document.getElementById('productName');
+        const productQuantityInput = document.getElementById('productQuantity');
+        const unitPriceInput = document.getElementById('unitPrice');
+        const addProductBtn = document.getElementById('addProductBtn');
+        const quotationTableBody = document.getElementById('quotationTableBody');
+        const grandTotalSpan = document.getElementById('grandTotal');
+        const categoryButtonsContainer = document.getElementById('categoryButtons');
+        const categoryProductsContainer = document.getElementById('categoryProducts');
+        const generatePdfBtn = document.getElementById('generatePdfBtn');
+
+        // Referencias al modal
+        const messageModal = document.getElementById('messageModal');
+        const modalMessage = document.getElementById('modalMessage');
+        const closeButton = document.querySelector('.close-button');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
+
+        let products = []; // Array para almacenar los productos de la cotización
+
+        // Datos de la empresa para el membrete del PDF
+        const companyInfo = {
+            name: "Tu Empresa de Seguridad Integral",
+            address: "Calle Ficticia #123, Colonia Ejemplo, Ciudad de México",
+            phone: "+52 55 1234 5678",
+            email: "contacto@tuempresa.com",
+            whatsapp: "+52 55 8765 4321"
+        };
+
+        // Datos de productos por categoría con imágenes y detalles
+        const productsByCategory = {
+            "Cámaras": [
+                { name: "Cámara Domo de 2 Megapíxeles", unitPrice: 550.00, imageUrl: "/assets/camaras/1.png", details: "Iluminación Dual Inteligente Hasta 25Mts con IR & 20Mts Luz Calida/ Micrófono Integrado" },
+                { name: "Cámara Bullet de 2 Megapíxeles", unitPrice: 600.00, imageUrl: "/assets/camaras/2.png", details: "Iluminación Dual Inteligente 30 Mts IR y 20 Mts Luz Visible/ Micrófono Integrado" },
+                { name: "Cámara PTZ IP", unitPrice: 250.00, imageUrl: "https://placehold.co/100x100/AEC6CF/FFFFFF?text=Cámara+PTZ", details: "Cámara PTZ IP con zoom óptico y control de movimiento remoto." },
+                { name: "NVR 8 Canales", unitPrice: 180.00, imageUrl: "https://placehold.co/100x100/AEC6CF/FFFFFF?text=NVR", details: "Grabador de video en red (NVR) de 8 canales para sistemas de seguridad IP." },
+                { name: "Cable Coaxial RG59 (Metro)", unitPrice: 1.20, imageUrl: "https://placehold.co/100x100/AEC6CF/FFFFFF?text=Cable+RG59", details: "Cable coaxial de alta calidad para transmisión de video en sistemas CCTV." }
+            ],
+            "Control de Asistencia": [
+                { name: "Lector Biométrico Huella", unitPrice: 120.00, imageUrl: "https://placehold.co/100x100/ADD8E6/FFFFFF?text=Huella", details: "Dispositivo de control de asistencia por huella dactilar, rápido y seguro." },
+                { name: "Terminal Reconocimiento Facial", unitPrice: 300.00, imageUrl: "https://placehold.co/100x100/ADD8E6/FFFFFF?text=Facial", details: "Terminal avanzado con reconocimiento facial para control de acceso y asistencia." },
+                { name: "Software de Gestión de Asistencia", unitPrice: 450.00, imageUrl: "https://placehold.co/100x100/ADD8E6/FFFFFF?text=Software", details: "Software completo para la administración y generación de reportes de asistencia." },
+                { name: "Tarjeta de Proximidad RFID (Unidad)", unitPrice: 2.50, imageUrl: "https://placehold.co/100x100/ADD8E6/FFFFFF?text=RFID", details: "Tarjeta RFID de alta frecuencia para sistemas de control de acceso." }
+            ],
+            "Cercas Eléctricas": [
+                { name: "Electrificador de Alta Potencia", unitPrice: 150.00, imageUrl: "https://placehold.co/100x100/90EE90/FFFFFF?text=Electrificador", details: "Electrificador robusto para cercas eléctricas de seguridad perimetral." },
+                { name: "Poste Aislador", unitPrice: 5.00, imageUrl: "https://placehold.co/100x100/90EE90/FFFFFF?text=Poste", details: "Poste con aisladores para la instalación de alambre electrificado." },
+                { name: "Alambre de Acero Galvanizado (Metro)", unitPrice: 0.80, imageUrl: "https://placehold.co/100x100/90EE90/FFFFFF?text=Alambre", details: "Alambre de acero galvanizado de alta resistencia para cercas eléctricas." },
+                { name: "Sirena para Cerca Eléctrica", unitPrice: 45.00, imageUrl: "https://placehold.co/100x100/90EE90/FFFFFF?text=Sirena", details: "Sirena de alta potencia para alertar sobre intrusiones en cercas eléctricas." }
+            ],
+            "Redes": [
+                { name: "Router Inalámbrico Gigabit", unitPrice: 60.00, imageUrl: "https://placehold.co/100x100/FFD700/000000?text=Router", details: "Router inalámbrico de doble banda con velocidades Gigabit para el hogar u oficina." },
+                { name: "Switch de 24 Puertos", unitPrice: 100.00, imageUrl: "https://placehold.co/100x100/FFD700/000000?text=Switch", details: "Switch de 24 puertos Ethernet para expandir la red local." },
+                { name: "Cable Ethernet Cat6 (Metro)", unitPrice: 0.50, imageUrl: "https://placehold.co/100x100/FFD700/000000?text=Cable+Cat6", details: "Cable Ethernet Categoría 6 para conexiones de red de alta velocidad." },
+                { name: "Access Point Dual Band", unitPrice: 85.00, imageUrl: "https://placehold.co/100x100/FFD700/000000?text=AP", details: "Punto de acceso inalámbrico de doble banda para ampliar la cobertura Wi-Fi." },
+                { name: "Conector RJ45 (Paquete de 100)", unitPrice: 15.00, imageUrl: "https://placehold.co/100x100/FFD700/000000?text=RJ45", details: "Conectores RJ45 para cables de red, ideales para instalaciones." }
+            ],
+            "Servicios": [
+                { name: "Instalación de Cámaras (por cámara)", unitPrice: 50.00, imageUrl: "https://placehold.co/100x100/DDA0DD/FFFFFF?text=Instalación", details: "Servicio profesional de instalación de cámaras de seguridad." },
+                { name: "Mantenimiento de Redes (Hora)", unitPrice: 40.00, imageUrl: "https://placehold.co/100x100/DDA0DD/FFFFFF?text=Mantenimiento", details: "Servicio de mantenimiento preventivo y correctivo para redes." },
+                { name: "Configuración de Software (por hora)", unitPrice: 70.00, imageUrl: "https://placehold.co/100x100/DDA0DD/FFFFFF?text=Configuración", details: "Soporte para configuración y optimización de software de sistemas de seguridad." },
+                { name: "Soporte Técnico Remoto (Hora)", unitPrice: 35.00, imageUrl: "https://placehold.co/100x100/DDA0DD/FFFFFF?text=Soporte", details: "Asistencia técnica remota para resolución de problemas." },
+                { name: "Diseño de Topología de Red", unitPrice: 120.00, imageUrl: "https://placehold.co/100x100/DDA0DD/FFFFFF?text=Diseño", details: "Servicio de diseño y planificación de topologías de red eficientes." }
+            ]
+        };
+
+        // --- Funciones del Modal de Mensaje ---
+        function showMessage(message) {
+            modalMessage.textContent = message;
+            messageModal.style.display = 'flex'; // Mostrar el modal
+        }
+
+        function hideMessage() {
+            messageModal.style.display = 'none'; // Ocultar el modal
+        }
+
+        closeButton.addEventListener('click', hideMessage);
+        modalCloseBtn.addEventListener('click', hideMessage);
+        window.addEventListener('click', (event) => {
+            if (event.target == messageModal) {
+                hideMessage();
+            }
+        });
+
+        // --- Funciones de Cotización ---
+
+        // Función para calcular el total general
+        function calculateGrandTotal() {
+            const total = products.reduce((sum, product) => sum + product.subtotal, 0);
+            grandTotalSpan.textContent = `$${total.toFixed(2)}`;
+        }
+
+        // Función para renderizar la tabla de productos
+        function renderProducts() {
+            quotationTableBody.innerHTML = ''; // Limpiar la tabla antes de renderizar
+            products.forEach((product, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-gray-900">${product.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-gray-700">${product.quantity}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-gray-700">$${product.unitPrice.toFixed(2)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-gray-900 font-semibold">$${product.subtotal.toFixed(2)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <button class="btn-danger remove-product-btn" data-index="${index}">Eliminar</button>
+                    </td>
+                `;
+                quotationTableBody.appendChild(row);
+            });
+            calculateGrandTotal(); // Recalcular el total cada vez que se renderizan los productos
+        }
+
+        // Event listener para el botón "Agregar Producto Manualmente"
+        addProductBtn.addEventListener('click', () => {
+            const name = productNameInput.value.trim();
+            const quantity = parseInt(productQuantityInput.value);
+            const unitPrice = parseFloat(unitPriceInput.value);
+
+            // Validaciones básicas
+            if (!name) {
+                showMessage('Por favor, ingresa el nombre del producto.');
+                return;
+            }
+            if (isNaN(quantity) || quantity <= 0) {
+                showMessage('La cantidad debe ser un número positivo.');
+                return;
+            }
+            if (isNaN(unitPrice) || unitPrice <= 0) {
+                showMessage('El precio unitario debe ser un número positivo.');
+                return;
+            }
+
+            const subtotal = quantity * unitPrice;
+
+            products.push({
+                name,
+                quantity,
+                unitPrice,
+                subtotal
+            });
+
+            // Limpiar los campos del formulario
+            productNameInput.value = '';
+            productQuantityInput.value = '1';
+            unitPriceInput.value = '0.00';
+
+            renderProducts(); // Actualizar la tabla
+        });
+
+        // Event listener para los botones "Eliminar" (delegación de eventos)
+        quotationTableBody.addEventListener('click', (event) => {
+            if (event.target.classList.contains('remove-product-btn')) {
+                const indexToRemove = parseInt(event.target.dataset.index);
+                products.splice(indexToRemove, 1); // Eliminar el producto del array
+                renderProducts(); // Volver a renderizar la tabla
+            }
+        });
+
+        // --- Funciones de Categorías y Productos Predefinidos ---
+
+        // Función para generar los botones de categoría
+        function generateCategoryButtons() {
+            categoryButtonsContainer.innerHTML = '';
+            Object.keys(productsByCategory).forEach(category => {
+                const button = document.createElement('button');
+                button.textContent = category;
+                button.classList.add('btn-secondary', 'p-3', 'rounded-lg', 'font-semibold', 'text-lg', 'hover:bg-gray-700', 'transition', 'duration-200', 'ease-in-out');
+                button.dataset.category = category;
+                categoryButtonsContainer.appendChild(button);
+            });
+        }
+
+        // Función para mostrar productos de una categoría seleccionada
+        function displayCategoryProducts(category) {
+            categoryProductsContainer.innerHTML = '';
+            const productsInSelectedCategory = productsByCategory[category];
+
+            if (productsInSelectedCategory && productsInSelectedCategory.length > 0) {
+                productsInSelectedCategory.forEach((product, index) => {
+                    const productCard = document.createElement('div');
+                    productCard.classList.add('bg-gray-50', 'p-4', 'rounded-lg', 'shadow-sm', 'flex', 'flex-col', 'justify-between');
+                    productCard.innerHTML = `
+                        <div class="flex items-center mb-4">
+                            ${product.imageUrl ? `<img src="${product.imageUrl}" alt="${product.name}" class="w-16 h-16 object-cover rounded-md mr-4" onerror="this.onerror=null;this.src='https://placehold.co/100x100/E0E0E0/666666?text=IMG';">` : ''}
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">${product.name}</h3>
+                                <p class="text-gray-600 text-sm">${product.details || 'Sin detalles.'}</p>
+                            </div>
+                        </div>
+                        <p class="text-gray-600 mb-4">Precio Unitario: <span class="font-bold text-indigo-600">$${product.unitPrice.toFixed(2)}</span></p>
+                        <div class="flex items-center space-x-3 mb-4">
+                            <label for="qty-${category}-${index}" class="text-sm font-medium text-gray-700">Cantidad:</label>
+                            <input type="number" id="qty-${category}-${index}" value="1" min="1" class="w-20 p-2 border rounded-md text-center">
+                        </div>
+                        <button class="btn-primary add-from-category-btn"
+                                data-name="${product.name}"
+                                data-price="${product.unitPrice}"
+                                data-qty-id="qty-${category}-${index}">
+                            Añadir a Cotización
+                        </button>
+                    `;
+                    categoryProductsContainer.appendChild(productCard);
+                });
+            } else {
+                categoryProductsContainer.innerHTML = '<p class="text-gray-600">No hay productos disponibles para esta categoría.</p>';
+            }
+        }
+
+        // Event listener para los botones de categoría (delegación de eventos)
+        categoryButtonsContainer.addEventListener('click', (event) => {
+            if (event.target.tagName === 'BUTTON' && event.target.dataset.category) {
+                // Remover clase activa de todos los botones y añadirla al clickeado
+                Array.from(categoryButtonsContainer.children).forEach(btn => {
+                    btn.classList.remove('bg-indigo-700', 'hover:bg-indigo-800');
+                    btn.classList.add('bg-gray-600', 'hover:bg-gray-700');
+                });
+                event.target.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+                event.target.classList.add('bg-indigo-700', 'hover:bg-indigo-800');
+
+                displayCategoryProducts(event.target.dataset.category);
+            }
+        });
+
+        // Event listener para añadir productos desde la lista de categorías
+        categoryProductsContainer.addEventListener('click', (event) => {
+            if (event.target.classList.contains('add-from-category-btn')) {
+                const name = event.target.dataset.name;
+                const unitPrice = parseFloat(event.target.dataset.price);
+                const quantityInputId = event.target.dataset.qtyId;
+                const quantity = parseInt(document.getElementById(quantityInputId).value);
+
+                if (isNaN(quantity) || quantity <= 0) {
+                    showMessage('La cantidad debe ser un número positivo.');
+                    return;
+                }
+
+                const subtotal = quantity * unitPrice;
+
+                products.push({
+                    name,
+                    quantity,
+                    unitPrice,
+                    subtotal
+                });
+                renderProducts(); // Actualizar la tabla de cotización
+                showMessage(`"${name}" agregado a la cotización.`);
+            }
+        });
+
+        // --- Función para Generar PDF ---
+        generatePdfBtn.addEventListener('click', () => {
+            if (products.length === 0) {
+                showMessage('No hay productos en la cotización para generar un PDF.');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            let y = 20; // Posición inicial Y
+
+            // Membrete de la empresa
+            doc.setFontSize(10);
+            doc.text(companyInfo.name, 10, y);
+            y += 5;
+            doc.text(companyInfo.address, 10, y);
+            y += 5;
+            doc.text(`Tel: ${companyInfo.phone} | Email: ${companyInfo.email}`, 10, y);
+            y += 5;
+            doc.text(`WhatsApp: ${companyInfo.whatsapp}`, 10, y);
+            y += 10;
+
+            // Título de la cotización
+            doc.setFontSize(22);
+            doc.text("Cotización de Productos y Servicios", 105, y, null, null, "center");
+            y += 15;
+
+            // Dirigido a:
+            const recipientName = quotationRecipientInput.value.trim();
+            if (recipientName) {
+                doc.setFontSize(12);
+                doc.text(`Dirigido a: ${recipientName}`, 10, y);
+                y += 10;
+            }
+
+            // Fecha
+            doc.setFontSize(10);
+            const today = new Date();
+            doc.text(`Fecha: ${today.toLocaleDateString()}`, 10, y);
+            y += 10;
+
+            // Mensaje de agradecimiento
+            doc.setFontSize(10);
+            const thankYouMessage = "Muchas gracias por cotizar con nosotros, a continuación detallamos los productos y servicios solicitados.";
+            doc.text(thankYouMessage, 10, y);
+            y += 10;
+
+            // Encabezados de la tabla
+            doc.setFontSize(12);
+            doc.text("Producto", 10, y);
+            doc.text("Cantidad", 80, y);
+            doc.text("P. Unitario", 120, y);
+            doc.text("Subtotal", 170, y);
+            y += 7;
+
+            doc.setLineWidth(0.5);
+            doc.line(10, y, 200, y); // Línea divisoria
+            y += 5;
+
+            // Detalles de los productos
+            doc.setFontSize(10);
+            products.forEach(product => {
+                if (y > 260) { // Si se acerca al final de la página, añade una nueva página
+                    doc.addPage();
+                    y = 20; // Reinicia Y para la nueva página
+                    // Repite el membrete y el encabezado en la nueva página si es necesario
+                    doc.setFontSize(10);
+                    doc.text(companyInfo.name, 10, y);
+                    y += 5;
+                    doc.text(companyInfo.address, 10, y);
+                    y += 5;
+                    doc.text(`Tel: ${companyInfo.phone} | Email: ${companyInfo.email}`, 10, y);
+                    y += 5;
+                    doc.text(`WhatsApp: ${companyInfo.whatsapp}`, 10, y);
+                    y += 10;
+                    doc.setFontSize(12);
+                    doc.text("Producto", 10, y);
+                    doc.text("Cantidad", 80, y);
+                    doc.text("P. Unitario", 120, y);
+                    doc.text("Subtotal", 170, y);
+                    y += 7;
+                    doc.setLineWidth(0.5);
+                    doc.line(10, y, 200, y);
+                    y += 5;
+                    doc.setFontSize(10);
+                }
+                doc.text(product.name, 10, y);
+                doc.text(product.quantity.toString(), 80, y);
+                doc.text(`$${product.unitPrice.toFixed(2)}`, 120, y);
+                doc.text(`$${product.subtotal.toFixed(2)}`, 170, y);
+                y += 7;
+            });
+
+            y += 10; // Espacio antes del total
+
+            // Total General
+            doc.setFontSize(16);
+            const grandTotal = products.reduce((sum, product) => sum + product.subtotal, 0);
+            doc.text(`Total General: $${grandTotal.toFixed(2)}`, 170, y, null, null, "right");
+            y += 20;
+
+            // Firma
+            doc.setFontSize(10);
+            doc.text("Le atiende José Arturo Bustamante Lazcano Servidor y Amigo", 105, y, null, null, "center");
+
+            // Leyenda de IVA en el pie de página
+            doc.setFontSize(8);
+            doc.text("Los precios incluyen IVA", 10, doc.internal.pageSize.height - 10);
+
+
+            // Guardar el PDF
+            doc.save("cotizacion.pdf");
+            showMessage('PDF de la cotización generado exitosamente.');
+        });
+
+
+        // Inicializar: generar botones de categoría y renderizar productos (vacío al principio)
+        generateCategoryButtons();
+        renderProducts();
+    </script>
+</body>
+</html>
